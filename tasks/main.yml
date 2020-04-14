@@ -1,0 +1,16 @@
+---
+# tasks file for dba_ray.mongodb
+- include: password.yml
+  when: ( is_standalone | default(False) )
+
+- include: system_check.yml
+  when: is_standalone | default(False)
+
+- include: initial_start.yml
+  when: is_standalone | default(False)
+  
+- include: initial_replica_set.yml
+  when: ( is_standalone | default(False) ) and ( is_replica_set | default(False) )
+  
+- include: install_tools.yml
+  when: percona_tools | default(False)

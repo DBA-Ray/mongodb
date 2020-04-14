@@ -1,0 +1,49 @@
+# 系统环境检测，排除干扰
+
+- name: 关闭firewalld
+  service: name=firewalld state=stopped enabled=no
+
+- name: 永久关闭selinux
+  lineinfile:
+    dest: /etc/selinux/config
+    regexp: "^SELINUX="
+    line: "SELINUX=disabled"
+
+- name: 卸载系统自带的mariadb
+  yum:
+    name: mariadb
+    state: absent
+
+- name: Install base packages
+  yum:
+    name: "{{ packages }}"
+    state: latest
+    
+- name: Install pymongo
+  pip:
+    name: pymongo
+    state: latest
+
+- name: Stop mongodb server
+  systemd:
+    name: mongod
+    state: stopped
+  when: whether_uninstall
+
+#- name: Uninsatll mongodb
+#  yum:
+#    name: mongodb-org
+#    state: absent
+#  when: whether_uninstall
+
+- name: Remove existing mongodb directory
+  file:
+    path: "{{ basedir }}"
+    state: absent
+    remote_src: 'True'
+  when: whether_uninstall
+
+#- name: 更新所有软件包
+#  yum:
+#    name: '*'
+#    state: latest

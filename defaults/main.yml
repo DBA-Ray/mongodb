@@ -1,0 +1,27 @@
+---
+# defaults file for dba_ray.mongodb
+# Whether to uninstall the original service and then install it
+whether_uninstall: True
+# Which hosts to deploy
+deploy_hosts: mongodb
+# Directory path
+mongodb_upgrade_version: mongodb-8.0.19-el7-x86_64
+mongodb_upgrade_package: "{{ mongodb_upgrade_version }}.tar.gz"
+mongodb_version: 4.2
+package_name: "{{ mongodb_version }}.tar.gz"
+install_dir: /var/local
+package_dir: "{{ install_dir }}/package"
+basedir: "{{ install_dir }}/mongodb"
+shelldir: "{{ install_dir }}/shell"
+monitordir: "{{ install_dir }}/monitor"
+datadir: "{{ basedir }}/data"
+keydir: "{{ basedir }}/key"
+etcdir: "{{ basedir }}/etc"
+logdir: "{{ basedir }}/log"
+socket: /tmp/mongodb.sock
+# Basic parameters
+replsetname: "dxz_rs1"
+group_replication_group_name: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+mongodb_port: 27017
+# primary hostname for mgr
+primary_hostname: mgr4

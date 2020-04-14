@@ -1,0 +1,86 @@
+#initial and start mongodb server
+
+- name: Rendering mongodb yum repo file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - { src: 'mongodb-org-4.2.repo.j2', dest: '/etc/yum.repos.d/mongodb-org-4.2.repo' }
+
+- name: Install mongodb via yum
+  yum:
+    name: mongodb-org
+    state: latest
+
+- name: Create directories for mongodb
+  file: path={{ item }} state=directory owner=mongod group=mongod mode=0760
+  with_items:
+#    - "{{ package_dir }}"
+#    - "{{ shelldir }}"
+#    - "{{ monitordir }}"
+    - "{{ basedir }}"
+    - "{{ datadir }}"
+    - "{{ keydir }}"
+    - "{{ logdir }}"
+
+- name: Generate keyfile for mongodb
+  shell: "openssl rand -base64 756 > /etc/ansible/roles/dba_ray.mongodb/files/keyfile"
+  when: ansible_hostname not in groups.mongodb
+
+- name: Copy keyfile to all members
+  copy:
+    src: keyfile
+    dest: "{{ keydir }}/keyfile"
+    owner: mongod
+    group: mongod
+    mode: 0600
+   
+- name: Rendering mongodb parameter file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: mongod
+    group: mongod
+    mode: 0660
+  with_items:
+    - { src: 'mongod.conf.j2', dest: "/etc/mongod.conf" }
+
+#- name: Rendering bash file
+#  template:
+#    src: "{{ item.src }}"
+#    dest: "{{ item.dest }}"
+#    owner: root
+#    group: root
+#    mode: 0744
+#  with_items:
+#    - { src: 'mongod.conf_auto.sh.j2', dest: "{{ etcdir }}/mongod.conf_auto.sh" }
+    
+#- name: Auto config mongod.conf
+#  shell: "sh -x {{ etcdir }}/mongod.conf_auto.sh"    
+
+- name: Daemon reload mongodb server
+  systemd:
+    daemon_reload: yes
+
+- name: Enable mongodb server
+  systemd:
+    name: mongod
+    state: started
+    enabled: yes
+
+- name: Start mongodb server
+  systemd:
+    name: mongod
+    state: started
+
+- name: Create root user
+  mongodb_user:
+    database: admin
+    name: root
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present    

@@ -1,0 +1,22 @@
+---
+# vars file for dba_ray.mongodb
+packages:
+  - vim
+  - lrzsz
+  - telnet
+  - net-tools
+  - tree
+  - unzip
+  - libaio
+  - numactl
+  - expect
+  - python-pymongo
+  - epel-release
+  - python-pip
+  - python2-pip.noarch
+  - openssl
+#  - PyOpenSSL
+#  - pyhon3
+
+vars_files:
+  - secrets.yml

@@ -1,0 +1,43 @@
+- name: Add replSetName
+  lineinfile:
+    path: /etc/mongod.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items: 
+    - { regexp: '^#replication', line: 'replication:' }
+    - { regexp: '^#replSetName', line: "  replSetName: {{ replsetname }}" }
+   
+- name: Restart mongodb server
+  systemd:
+    name: mongod
+    state: restarted
+    
+- name: Ensure replicaset exists
+  mongodb_replicaset:
+    login_host: localhost
+    login_user: root
+    login_password: "{{ root_password }}"
+    login_port: "{{ mongodb_port }}"
+    replica_set: "{{ replsetname }}"
+    chaining_allowed: yes
+    election_timeout_millis: 5000
+    members:
+    - "mongo1:{{ mongodb_port }}"
+    - "mongo2:{{ mongodb_port }}"
+    - "mongo3:{{ mongodb_port }}"
+  when: ansible_hostname == "mongo1"
+   
+- name: Create business database and user
+  mongodb_user:
+    login_host: localhost
+    login_user: root
+    login_password: "{{ root_password }}"
+    login_port: "{{ mongodb_port }}"
+    database: dxz
+    name: dxz
+    password: "{{ business_password }}"
+    update_password: always
+    replica_set: "{{ replsetname }}"
+    roles: readWrite
+    state: present
+  when: ansible_hostname in groups.mongodb
