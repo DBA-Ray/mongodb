@@ -1,6 +1,6 @@
 galaxy_info:
   author: DBA Ray
-  description: Auto deploy mongodb
+  description: Automatically deploy the latest version of mongodb.
   company: dxz
 
   # If the issue tracker for your role is not on github, uncomment the
@@ -31,11 +31,6 @@ galaxy_info:
     - name: EL
       versions:
         - 7
-  # platforms:
-  # - name: Fedora
-  #   versions:
-  #   - all
-  #   - 25
   # - name: SomePlatform
   #   versions:
   #   - all
@@ -43,9 +38,11 @@ galaxy_info:
   #   - 7
   #   - 99.99
 
-  galaxy_tags: []
-    - mongodb
-    # List tags for your role here, one per line. A tag is a keyword that describes
+  galaxy_tags:
+  # - mysql
+    - mgr
+    - replication
+    # List tags for your role here, one per line. A tag is a keyword  that describes
     # and categorizes the role. Users find roles by searching for tags. Be sure to
     # remove the '[]' above, if you add tags to this list.
     #
