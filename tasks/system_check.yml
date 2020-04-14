@@ -18,7 +18,7 @@
   yum:
     name: "{{ packages }}"
     state: latest
-    
+
 - name: Install pymongo
   pip:
     name: pymongo

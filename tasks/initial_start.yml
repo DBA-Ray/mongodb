@@ -37,7 +37,7 @@
     owner: mongod
     group: mongod
     mode: 0600
-   
+
 - name: Rendering mongodb parameter file
   template:
     src: "{{ item.src }}"
@@ -57,9 +57,9 @@
 #    mode: 0744
 #  with_items:
 #    - { src: 'mongod.conf_auto.sh.j2', dest: "{{ etcdir }}/mongod.conf_auto.sh" }
-    
+
 #- name: Auto config mongod.conf
-#  shell: "sh -x {{ etcdir }}/mongod.conf_auto.sh"    
+#  shell: "sh -x {{ etcdir }}/mongod.conf_auto.sh"
 
 - name: Daemon reload mongodb server
   systemd:

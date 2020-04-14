@@ -3,15 +3,15 @@
     path: /etc/mongod.conf
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
-  with_items: 
+  with_items:
     - { regexp: '^#replication', line: 'replication:' }
     - { regexp: '^#replSetName', line: "  replSetName: {{ replsetname }}" }
-   
+
 - name: Restart mongodb server
   systemd:
     name: mongod
     state: restarted
-    
+
 - name: Ensure replicaset exists
   mongodb_replicaset:
     login_host: localhost
@@ -26,7 +26,7 @@
     - "mongo2:{{ mongodb_port }}"
     - "mongo3:{{ mongodb_port }}"
   when: ansible_hostname == "mongo1"
-   
+
 - name: Create business database and user
   mongodb_user:
     login_host: localhost
