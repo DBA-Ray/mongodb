@@ -18,9 +18,8 @@
 - name: Create directories for mongodb
   file: path={{ item }} state=directory owner=mongod group=mongod mode=0760
   with_items:
-#    - "{{ package_dir }}"
-#    - "{{ shelldir }}"
-#    - "{{ monitordir }}"
+    - "{{ shelldir }}"
+    - "{{ monitordir }}"
     - "{{ basedir }}"
     - "{{ datadir }}"
     - "{{ keydir }}"
@@ -28,7 +27,7 @@
 
 - name: Generate keyfile for mongodb
   shell: "openssl rand -base64 756 > /etc/ansible/roles/dba_ray.mongodb/files/keyfile"
-  when: ansible_hostname not in groups.mongodb
+  when: inventory_hostname_short == "ansible"
 
 - name: Copy keyfile to all members
   copy:
@@ -83,4 +82,4 @@
     password: "{{ root_password }}"
     update_password: always
     roles: root
-    state: present    
+    state: present

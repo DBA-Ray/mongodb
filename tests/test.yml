@@ -1,9 +1,9 @@
 ---
-- hosts: mongodb:slave_monitor1
+- hosts: mongodb:ansible
   remote_user: root
-  vars: 
-    #is_standalone: True
-    #is_replica_set: True
-    percona_tools: True # Whether to install percona tools
+  vars:
+    is_standalone: True
+    is_replica_set: True
+    percona_tools: False # Whether to install percona tools
   roles:
     - dba_ray.mongodb

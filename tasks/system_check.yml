@@ -30,11 +30,11 @@
     state: stopped
   when: whether_uninstall
 
-#- name: Uninsatll mongodb
-#  yum:
-#    name: mongodb-org
-#    state: absent
-#  when: whether_uninstall
+- name: Uninsatll mongodb
+  yum:
+    name: mongodb-org
+    state: absent
+  when: whether_uninstall
 
 - name: Remove existing mongodb directory
   file:

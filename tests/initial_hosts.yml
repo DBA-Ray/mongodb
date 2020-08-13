@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: mongodb:ansible
   gather_facts: True
   remote_user: root
   tasks:
@@ -7,21 +7,14 @@
       src: /root/.ssh/id_rsa.pub
       dest: /tmp/authorized_keys
       mode: 0600
-   # - name: Delete ansible host
-   #   lineinfile:
-   #     path: /etc/hosts
-   #     regexp: '^172.17'
-   #     state: absent
     - name: Add IP address,hostname of all hosts to all hosts
       lineinfile:
         dest: /etc/hosts
         line: "{{ hostvars[item]['ansible_default_ipv4']['address'] }} {{ hostvars[item]['inventory_hostname_short'] }}"
         state: present
       with_items:
-        - "{{ groups.mgr }}"
-        - "{{ groups.proxysql }}"
-        - "{{ groups.slave_monitor }}"
         - "{{ groups.mongodb }}"
+        - "ansible"
     - name: Config hostname
       hostname:
         name: "{{ inventory_hostname_short }}"
