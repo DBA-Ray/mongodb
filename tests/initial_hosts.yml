@@ -3,10 +3,10 @@
   gather_facts: True
   remote_user: root
   tasks:
-    - name: Copy id_rsa.pub to other hosts
-      src: /root/.ssh/id_rsa.pub
-      dest: /tmp/authorized_keys
-      mode: 0600
+    - name: ssh-copy
+      authorized_key: user=root key="{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+      when: inventory_hostname_short != "ansible"
+      
     - name: Add IP address,hostname of all hosts to all hosts
       lineinfile:
         dest: /etc/hosts
@@ -15,6 +15,7 @@
       with_items:
         - "{{ groups.mongodb }}"
         - "ansible"
+
     - name: Config hostname
       hostname:
         name: "{{ inventory_hostname_short }}"

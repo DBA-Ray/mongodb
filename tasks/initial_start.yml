@@ -8,12 +8,15 @@
     group: root
     mode: 0644
   with_items:
-    - { src: 'mongodb-org-4.2.repo.j2', dest: '/etc/yum.repos.d/mongodb-org-4.2.repo' }
+    - { src: 'mongodb-org.repo.j2', dest: '/etc/yum.repos.d/mongodb-org.repo' }
 
 - name: Install mongodb via yum
   yum:
-    name: mongodb-org
+    name: mongodb-org*
     state: latest
+  register: repo
+  retries: 7
+  until: repo is succeeded
 
 - name: Create directories for mongodb
   file: path={{ item }} state=directory owner=mongod group=mongod mode=0760
@@ -60,6 +63,12 @@
 #- name: Auto config mongod.conf
 #  shell: "sh -x {{ etcdir }}/mongod.conf_auto.sh"
 
+- name: Modify mongod.server file
+  lineinfile:
+    dest: /usr/lib/systemd/system/mongod.service
+    regexp: "^ExecStart=/usr/bin/mongod"
+    line: "ExecStart=/usr/bin/numactl --interleave=all /usr/bin/mongod $OPTIONS"
+
 - name: Daemon reload mongodb server
   systemd:
     daemon_reload: yes
@@ -67,7 +76,6 @@
 - name: Enable mongodb server
   systemd:
     name: mongod
-    state: started
     enabled: yes
 
 - name: Start mongodb server
@@ -83,3 +91,11 @@
     update_password: always
     roles: root
     state: present
+    
+- name: Add log polling task schedule for mongodb
+  cron:
+    name: "logrotate"
+    weekday: "0"
+    minute: "0"
+    hour: "1"
+    job: "mongo -u root -p \'{{ root_password }}\' --eval \"db.adminCommand( { logRotate : 1 } )\" > /dev/null 2>&1 &"

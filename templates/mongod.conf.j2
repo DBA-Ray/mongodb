@@ -9,6 +9,11 @@ systemLog:
   logAppend: true
   path: {{ logdir }}/mongod.log
 
+operationProfiling:
+   mode: slowOp
+   slowOpThresholdMs: 1000
+   slowOpSampleRate: 1.0
+
 # Where and how to store data.
 storage:
   dbPath: {{ datadir }}

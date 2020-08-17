@@ -22,10 +22,14 @@
     chaining_allowed: yes
     election_timeout_millis: 5000
     members:
-    - "mongo1:{{ mongodb_port }}"
-    - "mongo2:{{ mongodb_port }}"
-    - "mongo3:{{ mongodb_port }}"
-  when: ansible_hostname == "mongo1"
+    - "mongodb1:{{ mongodb_port }}"
+    - "mongodb2:{{ mongodb_port }}"
+    - "mongodb3:{{ mongodb_port }}"
+  when: ansible_hostname == "mongodb1"
+
+- name: Add arbiter for replicaset
+  shell: mongo -u root -p '{{ root_password }}' --eval \"rs.addArb\("ansible:{{ mongodb_port }}"\)\"
+  when: ansible_hostname == "mongodb1"
 
 - name: Create business database and user
   mongodb_user:
@@ -33,7 +37,7 @@
     login_user: root
     login_password: "{{ root_password }}"
     login_port: "{{ mongodb_port }}"
-    database: dxz
+    database: dxz-t
     name: dxz
     password: "{{ business_password }}"
     update_password: always

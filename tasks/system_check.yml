@@ -1,18 +1,21 @@
-# 系统环境检测，排除干扰
+# Detection system to eliminate interference
 
-- name: 关闭firewalld
+- name: Disable firewalld
   service: name=firewalld state=stopped enabled=no
 
-- name: 永久关闭selinux
+- name: Disable selinux forever 
   lineinfile:
     dest: /etc/selinux/config
     regexp: "^SELINUX="
     line: "SELINUX=disabled"
 
-- name: 卸载系统自带的mariadb
+- name: Uninsatll mariadb on the system
   yum:
     name: mariadb
     state: absent
+
+- name: Modify kernel hugepage
+  shell: "echo never > /sys/kernel/mm/transparent_hugepage/enabled;echo never > /sys/kernel/mm/transparent_hugepage/defrag"
 
 - name: Install base packages
   yum:
@@ -30,11 +33,11 @@
     state: stopped
   when: whether_uninstall
 
-- name: Uninsatll mongodb
-  yum:
-    name: mongodb-org
-    state: absent
-  when: whether_uninstall
+#- name: Uninsatll mongodb
+#  yum:
+#    name: mongodb-org
+#    state: absent
+#  when: whether_uninstall
 
 - name: Remove existing mongodb directory
   file:
@@ -43,7 +46,7 @@
     remote_src: 'True'
   when: whether_uninstall
 
-#- name: 更新所有软件包
+#- name: Update all packages
 #  yum:
 #    name: '*'
 #    state: latest
