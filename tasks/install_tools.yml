@@ -28,7 +28,7 @@
 - name: Config pmm server via pmm-admin
   shell: "pmm-admin config --server-insecure-tls --server-url=https://admin:admin@ansible:443"
   when: inventory_hostname_short in groups.mongodb
-  
+
 - name: Add mongodb metric via pmm-admin
   shell: "pmm-admin add mongodb --username=root --password=\'{{ root_password }}\' --cluster=\'mongodb_pro\' --replication-set=\'{{ replsetname }}\'"
   when: inventory_hostname_short in groups.mongodb

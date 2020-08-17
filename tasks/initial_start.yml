@@ -91,7 +91,7 @@
     update_password: always
     roles: root
     state: present
-    
+
 - name: Add log polling task schedule for mongodb
   cron:
     name: "logrotate"
