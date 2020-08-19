@@ -14,7 +14,7 @@
     name: mariadb
     state: absent
 
-- name: Modify kernel hugepage
+- name: Disable kernel hugepage
   shell: "echo never > /sys/kernel/mm/transparent_hugepage/enabled;echo never > /sys/kernel/mm/transparent_hugepage/defrag"
 
 - name: Install base packages
