@@ -4,6 +4,7 @@
 whether_uninstall: False
 # Directory path
 mongodb_version: 4.4
+fstab_src: /dev/vdb
 install_dir: /var/local
 basedir: "{{ install_dir }}/mongodb"
 shelldir: "{{ install_dir }}/shell"
