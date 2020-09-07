@@ -20,18 +20,18 @@ storage:
   directoryPerDB: true
   journal:
     enabled: true
-    commitIntervalMs:500
+#    commitIntervalMs:500
   engine: wiredTiger
-  oplogMinRetentionHours: 168
-  wiredTiger:
-    engineConfig:
+#  oplogMinRetentionHours: 168
+#  wiredTiger:
+#    engineConfig:
 #         cacheSizeGB: <number>
-         journalCompressor: zstd
-         directoryForIndexes: false
-      collectionConfig:
-         blockCompressor: zstd
-      indexConfig:
-         prefixCompression: true
+#         journalCompressor: zstd
+#         directoryForIndexes: false
+#      collectionConfig:
+#         blockCompressor: zstd
+#      indexConfig:
+#         prefixCompression: true
 
 # how the process runs
 processManagement:
