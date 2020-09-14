@@ -78,6 +78,9 @@
     name: mongod
     enabled: yes
 
+- name: Clean system's buffer and cache
+  shell: "sysctl -w vm.drop_caches=1"
+
 - name: Start mongodb server
   systemd:
     name: mongod
