@@ -1,4 +1,26 @@
 #initial and start mongodb server
+- name: Install base packages
+  yum:
+    name: "{{ packages }}"
+    state: latest
+
+- name: Install pymongo
+  pip:
+    name: pymongo
+    state: latest
+
+- name: Stop mongodb server
+  systemd:
+    name: mongod
+    state: stopped
+  when: whether_uninstall
+
+- name: Remove existing mongodb directory
+  file:
+    path: "{{ basedir }}"
+    state: absent
+    remote_src: 'True'
+  when: whether_uninstall
 
 - name: Rendering mongodb yum repo file
   template:

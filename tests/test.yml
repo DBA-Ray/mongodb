@@ -1,9 +1,9 @@
 ---
-- hosts: mongodb:ansible
+- hosts: mongodb
   remote_user: root
   vars:
     is_standalone: True
     is_replica_set: True
-    percona_tools: False # Whether to install percona tools
+    whether_uninstall: False # Whether to uninstall the original service and then install it
   roles:
     - dba_ray.mongodb

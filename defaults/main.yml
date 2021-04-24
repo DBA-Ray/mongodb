@@ -1,11 +1,9 @@
 ---
 # defaults file for dba_ray.mongodb
-# Whether to uninstall the original service and then install it
-whether_uninstall: False
 # Directory path
 mongodb_version: 4.4
 fstab_src: /dev/vdb
-install_dir: /var/local
+install_dir: /data
 basedir: "{{ install_dir }}/mongodb"
 shelldir: "{{ install_dir }}/shell"
 monitordir: "{{ install_dir }}/monitor"
@@ -15,5 +13,5 @@ etcdir: "{{ basedir }}/etc"
 logdir: "{{ basedir }}/log"
 socket: /tmp/mongodb.sock
 # Basic parameters
-replsetname: "dxz_rs1"
+replsetname: "ttjb_rs1"
 mongodb_port: 27017

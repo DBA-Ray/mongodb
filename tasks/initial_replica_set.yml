@@ -28,7 +28,7 @@
   when: ansible_hostname == "mongodb1"
 
 - name: Add arbiter for replicaset
-  shell: mongo -u root -p '{{ root_password }}' --eval \"rs.addArb\("ansible:{{ mongodb_port }}"\)\"
+  shell: mongo -u root -p '{{ root_password }}' --eval \"rs.addArb\("{{ hostvars[groups['mongodb'][3]]['inventory_hostname_short'] }}:{{ mongodb_port }}"\)\"
   when: ansible_hostname == "mongodb1"
 
 - name: Create business database and user
