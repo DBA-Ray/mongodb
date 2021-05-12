@@ -1,10 +1,16 @@
 ---
 # tasks file for dba_ray.mongodb
 - include: password.yml
-  when: ( is_standalone | default(False) ) or ( is_replica_set | default(False) )
+  when: ( is_standalone | default(False) ) or ( is_replica_set | default(False) ) or ( is_shard_cluster_pro | default(False) ) or ( is_shard_cluster | default(False) )
 
 - include: initial_start.yml
   when: is_standalone | default(False)
 
 - include: initial_replica_set.yml
   when: ( is_standalone | default(False) ) and ( is_replica_set | default(False) )
+
+- include: initial_shard_cluster_pro.yml
+  when: ( is_standalone | default(False) ) and ( is_shard_cluster_pro | default(False) )
+
+- include: initial_shard_cluster.yml
+  when: is_shard_cluster | default(False)

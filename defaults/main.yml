@@ -11,7 +11,13 @@ datadir: "{{ basedir }}/data"
 keydir: "{{ basedir }}/key"
 etcdir: "{{ basedir }}/etc"
 logdir: "{{ basedir }}/log"
-socket: /tmp/mongodb.sock
 # Basic parameters
 replsetname: "ttjb_rs1"
+mongos_port: 27077
+mongodb_conf_port: 27078
 mongodb_port: 27017
+mongodb1_port: 27018
+mongodb2_port: 27019
+# Business info
+business_user: ttjb
+database: ttjb

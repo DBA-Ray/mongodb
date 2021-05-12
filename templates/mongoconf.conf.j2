@@ -1,0 +1,65 @@
+# mongod.conf
+
+# for documentation of all options, see:
+#   http://docs.mongodb.org/manual/reference/configuration-options/
+
+# where to write logging data.
+systemLog:
+  destination: file
+  logAppend: true
+  path: {{ basedir }}_{{ mongodb_conf_port }}/log/mongod.log
+
+operationProfiling:
+   mode: slowOp
+   slowOpThresholdMs: 1000
+   slowOpSampleRate: 1.0
+
+# Where and how to store data.
+storage:
+  dbPath: {{ basedir }}_{{ mongodb_conf_port }}/data
+  directoryPerDB: true
+  journal:
+    enabled: true
+#    commitIntervalMs:500
+  engine: wiredTiger
+  oplogMinRetentionHours: 168
+#  wiredTiger:
+#    engineConfig:
+#         cacheSizeGB: <number>
+#         journalCompressor: zstd
+#         directoryForIndexes: false
+#      collectionConfig:
+#         blockCompressor: zstd
+#      indexConfig:
+#         prefixCompression: true
+
+# how the process runs
+processManagement:
+  fork: true  # fork and run in background
+  pidFilePath: /var/run/mongodb/mongod.pid  # location of pidfile
+  timeZoneInfo: /usr/share/zoneinfo
+
+# network interfaces
+net:
+  port: {{ mongodb_conf_port }}
+  bindIp: 0.0.0.0
+#  bindIp: localhost,{{ inventory_hostname_short }}  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.
+
+
+#security:
+#  authorization: enabled
+#  keyFile: {{ install_dir }}/mongokey/keyfile
+
+#operationProfiling:
+
+#replication
+sharding:
+  clusterRole: configsvr
+replication:
+  replSetName: replconf
+
+## Enterprise-Only Options
+
+#auditLog:
+
+#snmp:

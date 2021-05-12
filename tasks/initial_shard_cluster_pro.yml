@@ -1,0 +1,131 @@
+#initial and start mongodb server
+- name: Stop mongos server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongos
+
+- name: Stop mongodb shard server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongoshard
+
+- name: Stop mongodb config server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongoconf
+
+- name: Rendering config parameter file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: mongod
+    group: mongod
+    mode: 0660
+  with_items:
+    - { src: 'mongoconf_pro.conf.j2', dest: "/etc/mongod.conf" }
+  when: ansible_hostname in groups.mongoconf
+
+- name: Start mongodb config server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongoconf
+
+- name: Initiate config replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"replconf",members:[{_id:0,host:"mongoc1:{{ mongodb_port }}"},{_id:1,host:"mongoc2:{{ mongodb_port }}"},{_id:2,host:"mongoc3:{{ mongodb_port }}"}]})'
+  when: groups.mongoconf.index(inventory_hostname) == 0
+
+- name: Rendering shard parameter file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: mongod
+    group: mongod
+    mode: 0660
+  with_items:
+    - { src: 'mongod_shard_pro.conf.j2', dest: "/etc/mongod.conf" }
+  when: ansible_hostname in groups.mongoshard
+
+- name: Modify shard1 parameter file
+  lineinfile:
+    dest: /etc/mongod.conf
+    regexp: "  replSetName: shard0"
+    line: "  replSetName: shard1"
+  when: groups.mongodb.index(inventory_hostname) > 3 and groups.mongodb.index(inventory_hostname) < 7
+
+- name: Modify shard2 parameter file
+  lineinfile:
+    dest: /etc/mongod.conf
+    regexp: "  replSetName: shard0"
+    line: "  replSetName: shard2"
+  when: groups.mongodb.index(inventory_hostname) > 6
+
+- name: Start mongodb shard server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongoshard
+
+- name: Initiate shard0 replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"shard0",members:[{_id:0,host:"mongo1:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb_port }}",priority:10}]})'
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Initiate shard1 replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"shard1",members:[{_id:0,host:"mongo4:{{ mongodb_port }}",priority:20},{_id:1,host:"mongo5:{{ mongodb_port }}",priority:30},{_id:2,host:"mongo6:{{ mongodb_port }}",priority:10}]})'
+  when: groups.mongodb.index(inventory_hostname) == 4
+
+- name: Initiate shard2 replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"shard2",members:[{_id:0,host:"mongo7:{{ mongodb_port }}",priority:10},{_id:1,host:"mongo8:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo9:{{ mongodb_port }}",priority:30}]})'
+  when: groups.mongodb.index(inventory_hostname) == 8
+
+- name: Rendering mongos parameter file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: mongod
+    group: mongod
+    mode: 0660
+  with_items:
+    - { src: 'mongos_pro.conf.j2', dest: "/etc/mongod.conf" }
+  when: ansible_hostname in groups.mongos
+
+- name: Start mongos server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongos
+
+- name: Initiate mongos replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval '{{ item }}'
+  with_items:
+    - sh.addShard( "shard0/mongo1:{{ mongodb_port }},mongo2:{{ mongodb_port }},mongo3:{{ mongodb_port }}")
+    - sh.addShard( "shard1/mongo4:{{ mongodb_port }},mongo5:{{ mongodb_port }},mongo6:{{ mongodb_port }}")
+    - sh.addShard( "shard2/mongo7:{{ mongodb_port }},mongo8:{{ mongodb_port }},mongo9:{{ mongodb_port }}")
+  when: groups.mongos.index(inventory_hostname) == 0
+
+- name: Enable Sharding for a Database
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'sh.enableSharding("{{ database }}")'
+  when: groups.mongos.index(inventory_hostname) == 0
+
+- name: Create business user
+  mongodb_user:
+    login_host: localhost
+    login_user: root
+    login_password: "{{ root_password }}"
+    login_port: "{{ mongodb_port }}"
+    database: "{{ database }}"
+    name: "{{ business_user }}"
+    password: "{{ business_password }}"
+    update_password: always
+    roles: readWrite
+    state: present
+  when: groups.mongos.index(inventory_hostname) == 0

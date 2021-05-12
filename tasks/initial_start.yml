@@ -50,10 +50,6 @@
     - "{{ keydir }}"
     - "{{ logdir }}"
 
-- name: Generate keyfile for mongodb
-  shell: "openssl rand -base64 756 > /etc/ansible/roles/dba_ray.mongodb/files/keyfile"
-  when: inventory_hostname_short == "ansible"
-
 - name: Copy keyfile to all members
   copy:
     src: keyfile
@@ -61,6 +57,9 @@
     owner: mongod
     group: mongod
     mode: 0600
+
+#- name: Generate keyfile for mongodb
+#  shell: "openssl rand -base64 756 > {{ keydir }}/keyfile"
 
 - name: Rendering mongodb parameter file
   template:

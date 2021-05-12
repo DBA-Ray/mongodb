@@ -12,24 +12,30 @@
     name: mongod
     state: restarted
 
-- name: Ensure replicaset exists
-  mongodb_replicaset:
-    login_host: localhost
-    login_user: root
-    login_password: "{{ root_password }}"
-    login_port: "{{ mongodb_port }}"
-    replica_set: "{{ replsetname }}"
-    chaining_allowed: yes
-    election_timeout_millis: 5000
-    members:
-    - "mongodb1:{{ mongodb_port }}"
-    - "mongodb2:{{ mongodb_port }}"
-    - "mongodb3:{{ mongodb_port }}"
-  when: ansible_hostname == "mongodb1"
+#- name: Ensure replicaset exists
+#  mongodb_replicaset:
+#    login_host: localhost
+#    login_user: root
+#    login_password: "{{ root_password }}"
+#    login_port: "{{ mongodb_port }}"
+#    replica_set: "{{ replsetname }}"
+    #chaining_allowed: yes
+    #election_timeout_millis: 5000
+#    members:
+#    - "mongo1:{{ mongodb_port }}"
+#    - "mongo2:{{ mongodb_port }}"
+#    - "mongo3:{{ mongodb_port }}"
+#  when: groups.mongodb.index(inventory_hostname) == 0
 
-- name: Add arbiter for replicaset
-  shell: mongo -u root -p '{{ root_password }}' --eval \"rs.addArb\("{{ hostvars[groups['mongodb'][3]]['inventory_hostname_short'] }}:{{ mongodb_port }}"\)\"
-  when: ansible_hostname == "mongodb1"
+- name: Initiate replicaset
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"{{ replsetname }}",members:[{_id:0,host:"mongo1:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb_port }}",priority:10},{_id:3,host:"mongo4:{{ mongodb_port }}",arbiterOnly:true}]})'
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Set the secondary node to be readable
+  copy:
+    src: .mongorc.js
+    dest: /root/.mongorc.js
+  when: groups.mongodb.index(inventory_hostname) != 0
 
 - name: Create business database and user
   mongodb_user:
@@ -37,11 +43,11 @@
     login_user: root
     login_password: "{{ root_password }}"
     login_port: "{{ mongodb_port }}"
-    database: dxz-t
-    name: dxz
+    database: "{{ database }}"
+    name: "{{ business_user }}"
     password: "{{ business_password }}"
     update_password: always
     replica_set: "{{ replsetname }}"
     roles: readWrite
     state: present
-  when: ansible_hostname in groups.mongodb
+  when: groups.mongodb.index(inventory_hostname) == 0

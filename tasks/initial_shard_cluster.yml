@@ -1,0 +1,295 @@
+#initial and start mongodb server
+- name: Install base packages
+  yum:
+    name: "{{ packages }}"
+    state: latest
+
+- name: Install pymongo
+  pip:
+    name: pymongo
+    state: latest
+
+- name: Stop mongodb server
+  systemd:
+    name: "mongod_{{ item }}"
+    state: stopped
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+  when: whether_uninstall
+
+- name: Remove existing mongodb directory
+  file:
+    path: "{{ basedir }}_{{ item }}"
+    state: absent
+    remote_src: 'True'
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+  when: whether_uninstall
+
+- name: Rendering mongodb yum repo file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - { src: 'mongodb-org.repo.j2', dest: '/etc/yum.repos.d/mongodb-org.repo' }
+
+- name: Install mongodb via yum
+  yum:
+    name: mongodb-org*
+    state: latest
+  register: repo
+  retries: 7
+  until: repo is succeeded
+
+- name: Create monitor directories for mongodb
+  file: path={{ item }} state=directory owner=mongod group=mongod mode=0760
+  with_items:
+    - "{{ shelldir }}"
+    - "{{ monitordir }}"
+
+- name: Rendering mongod.conf_auto.sh
+  template:
+    src: mongod.conf_auto.sh.j2
+    dest: "{{ shelldir }}/mongod.conf_auto.sh"
+    owner: root
+    group: root
+    mode: 0744
+    
+- name: Auto config mongod.conf
+  shell: "sh -x {{ shelldir }}/mongod.conf_auto.sh"
+
+- name: Obtain cacheSizeGB
+  shell: "cat /tmp/mongo_cacheSizeGB.txt"
+  register: cacheSizeGB
+
+- name: Create data directories for mongodb
+  file: path="{{ basedir }}_{{ item }}/data" state=directory owner=mongod group=mongod mode=0760
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Create log directories for mongodb
+  file: path="{{ basedir }}_{{ item }}/log" state=directory owner=mongod group=mongod mode=0760
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Create key directories for mongodb
+  file: path="{{ install_dir }}/mongokey" state=directory owner=mongod group=mongod mode=0760
+
+- name: Copy keyfile to all members
+  copy:
+    src: keyfile
+    dest: "{{ install_dir }}/mongokey"
+    owner: mongod
+    group: mongod
+    mode: 0600
+
+- name: Rendering mongodb parameter file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ basedir }}_{{ item.port }}/data/mongod.conf"
+    owner: mongod
+    group: mongod
+    mode: 0660
+  with_items:
+    - { port: "{{ mongos_port }}", src: mongos.conf.j2 }
+    - { port: "{{ mongodb_conf_port }}", src: mongoconf.conf.j2 }
+    - { port: "{{ mongodb_port }}", src: mongod_shard.conf.j2 }
+    - { port: "{{ mongodb1_port }}", src: mongod_shard1.conf.j2 }
+    - { port: "{{ mongodb2_port }}", src: mongod_shard2.conf.j2 }
+
+- name: Rendering mongodb start file
+  template:
+    src: mongod.service.j2
+    dest: "/usr/lib/systemd/system/mongod_{{ item }}.service"
+    owner: mongod
+    group: mongod
+    mode: 0644
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Modify mongod.conf file
+  lineinfile:
+    dest: "{{ basedir }}_{{ item }}/data/mongod.conf"
+    regexp: "         cacheSizeGB: 1"
+    line: "         cacheSizeGB: {{ cacheSizeGB.stdout }}"
+  with_items: 
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Modify mongod.server file
+  lineinfile:
+    dest: "/usr/lib/systemd/system/mongod_{{ item }}.service"
+    regexp: ^Environment="OPTIONS=-f /etc/mongod.conf"
+    line: Environment="OPTIONS=-f {{ basedir }}_{{ item }}/data/mongod.conf"
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}" 
+
+- name: Modify mongos.server file
+  lineinfile:
+    dest: "/usr/lib/systemd/system/mongod_{{ mongos_port }}.service"
+    regexp: '/usr/bin/mongod'
+    line: 'ExecStart=/usr/bin/numactl --interleave=all /usr/bin/mongos $OPTIONS'
+
+- name: Daemon reload mongodb server
+  systemd:
+    daemon_reload: yes
+
+- name: Enable mongodb server
+  systemd:
+    name: "mongod_{{ item }}"
+    enabled: yes
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_conf_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}" 
+
+- name: Clean system's buffer and cache
+  shell: "sysctl -w vm.drop_caches=1"
+
+- name: Start mongod_conf server
+  systemd:
+    name: "mongod_{{ mongodb_conf_port }}"
+    state: started
+  tags: startup
+
+- name: Initiate config replicaset
+  shell: mongo --port {{ mongodb_conf_port }} --eval 'rs.initiate({_id:"replconf",members:[{_id:0,host:"mongo1:{{ mongodb_conf_port }}"},{_id:1,host:"mongo2:{{ mongodb_conf_port }}"},{_id:2,host:"mongo3:{{ mongodb_conf_port }}"}]})'
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Start mongod server
+  systemd:
+    name: "mongod_{{ item }}"
+    state: started
+  tags: startup
+  with_items: 
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Initiate shard0 replicaset
+  shell: mongo --port {{ mongodb_port }} --eval 'rs.initiate({_id:"shard0",members:[{_id:0,host:"mongo1:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb_port }}",priority:10}]})'
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Initiate shard1 replicaset
+  shell: mongo --port {{ mongodb1_port }} --eval 'rs.initiate({_id:"shard1",members:[{_id:0,host:"mongo1:{{ mongodb1_port }}",priority:20},{_id:1,host:"mongo2:{{ mongodb1_port }}",priority:30},{_id:2,host:"mongo3:{{ mongodb1_port }}",priority:10}]})'
+  when: groups.mongodb.index(inventory_hostname) == 1
+
+- name: Initiate shard2 replicaset
+  shell: mongo --port {{ mongodb2_port }} --eval 'rs.initiate({_id:"shard2",members:[{_id:0,host:"mongo1:{{ mongodb2_port }}",priority:10},{_id:1,host:"mongo2:{{ mongodb2_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb2_port }}",priority:30}]})'
+  when: groups.mongodb.index(inventory_hostname) == 2
+
+- name: Start mongos server
+  systemd:
+    name: "mongod_{{ mongos_port }}"
+    state: started
+  tags: startup
+
+- name: Initiate mongos replicaset
+  shell: mongo --port {{ mongos_port }} --eval '{{ item }}'
+  with_items:
+    - sh.addShard( "shard0/mongo1:{{ mongodb_port }},mongo2:{{ mongodb_port }},mongo3:{{ mongodb_port }}")
+    - sh.addShard( "shard1/mongo1:{{ mongodb1_port }},mongo2:{{ mongodb1_port }},mongo3:{{ mongodb1_port }}")
+    - sh.addShard( "shard2/mongo1:{{ mongodb2_port }},mongo2:{{ mongodb2_port }},mongo3:{{ mongodb2_port }}")
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Enable Sharding for a Database
+  shell: mongo --port {{ mongos_port }} --eval 'sh.enableSharding("{{ database }}")'
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Create root user
+  mongodb_user:
+    login_port: "{{ mongos_port }}"
+    database: admin
+    name: root
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Create business user
+  mongodb_user:
+    login_host: localhost
+    login_user: root
+    login_password: "{{ root_password }}"
+    login_port: "{{ mongos_port }}"
+    database: "{{ database }}"
+    name: "{{ business_user }}"
+    password: "{{ business_password }}"
+    update_password: always
+    roles: readWrite
+    state: present
+  when: groups.mongodb.index(inventory_hostname) == 0
+
+- name: Add auth for login
+  lineinfile:
+    path: "{{ basedir }}_{{ item.port }}/data/mongod.conf"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { port: "{{ mongodb_port }}", regexp: '^#security', line: 'security:' }
+    - { port: "{{ mongodb_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+    - { port: "{{ mongodb_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+    - { port: "{{ mongodb1_port }}", regexp: '^#security', line: 'security:' }
+    - { port: "{{ mongodb1_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+    - { port: "{{ mongodb1_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+    - { port: "{{ mongodb2_port }}", regexp: '^#security', line: 'security:' }
+    - { port: "{{ mongodb2_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+    - { port: "{{ mongodb2_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+    - { port: "{{ mongodb_conf_port }}", regexp: '^#security', line: 'security:' }
+    - { port: "{{ mongodb_conf_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+    - { port: "{{ mongodb_conf_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+    - { port: "{{ mongos_port }}", regexp: '^#security', line: 'security:' }
+    - { port: "{{ mongos_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+
+- name: Stop mongos server
+  systemd:
+    name: "mongod_{{ mongos_port }}"
+    state: stopped
+  tags: shutdown
+
+- name: Stop mongod server
+  systemd:
+    name: "mongod_{{ item }}"
+    state: stopped
+  tags: shutdown
+  with_items: 
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+
+- name: Stop mongod_conf server
+  systemd:
+    name: "mongod_{{ mongodb_conf_port }}"
+    state: stopped
+  tags: shutdown
