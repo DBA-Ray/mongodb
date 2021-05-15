@@ -13,12 +13,13 @@
   systemd:
     name: "mongod_{{ item }}"
     state: stopped
+  tags: shutdown
   with_items: 
     - "{{ mongos_port }}"
-    - "{{ mongodb_conf_port }}"
     - "{{ mongodb_port }}"
     - "{{ mongodb1_port }}"
     - "{{ mongodb2_port }}"
+    - "{{ mongodb_conf_port }}"
   when: whether_uninstall
 
 - name: Remove existing mongodb directory
@@ -251,45 +252,56 @@
     state: present
   when: groups.mongodb.index(inventory_hostname) == 0
 
-- name: Add auth for login
-  lineinfile:
-    path: "{{ basedir }}_{{ item.port }}/data/mongod.conf"
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-  with_items:
-    - { port: "{{ mongodb_port }}", regexp: '^#security', line: 'security:' }
-    - { port: "{{ mongodb_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
-    - { port: "{{ mongodb_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
-    - { port: "{{ mongodb1_port }}", regexp: '^#security', line: 'security:' }
-    - { port: "{{ mongodb1_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
-    - { port: "{{ mongodb1_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
-    - { port: "{{ mongodb2_port }}", regexp: '^#security', line: 'security:' }
-    - { port: "{{ mongodb2_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
-    - { port: "{{ mongodb2_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
-    - { port: "{{ mongodb_conf_port }}", regexp: '^#security', line: 'security:' }
-    - { port: "{{ mongodb_conf_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
-    - { port: "{{ mongodb_conf_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
-    - { port: "{{ mongos_port }}", regexp: '^#security', line: 'security:' }
-    - { port: "{{ mongos_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+- name: Create pmm user for local shard0
+  mongodb_user:
+    login_port: "{{ mongodb_port }}"
+    database: admin
+    name: pmm
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present
+  when: groups.mongodb.index(inventory_hostname) == 0
 
-- name: Stop mongos server
-  systemd:
-    name: "mongod_{{ mongos_port }}"
-    state: stopped
-  tags: shutdown
+- name: Create pmm user for local shard1
+  mongodb_user:
+    login_port: "{{ mongodb_port }}"
+    database: admin
+    name: pmm
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present
+  when: groups.mongodb.index(inventory_hostname) == 1
 
-- name: Stop mongod server
-  systemd:
-    name: "mongod_{{ item }}"
-    state: stopped
-  tags: shutdown
-  with_items: 
-    - "{{ mongodb_port }}"
-    - "{{ mongodb1_port }}"
-    - "{{ mongodb2_port }}"
+- name: Create pmm user for local shard2
+  mongodb_user:
+    login_port: "{{ mongodb_port }}"
+    database: admin
+    name: pmm
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present
+  when: groups.mongodb.index(inventory_hostname) == 2
 
-- name: Stop mongod_conf server
-  systemd:
-    name: "mongod_{{ mongodb_conf_port }}"
-    state: stopped
-  tags: shutdown
+#- name: Add auth for login
+#  lineinfile:
+#    path: "{{ basedir }}_{{ item.port }}/data/mongod.conf"
+#    regexp: "{{ item.regexp }}"
+#    line: "{{ item.line }}"
+#  with_items:
+#    - { port: "{{ mongodb_port }}", regexp: '^#security', line: 'security:' }
+#    - { port: "{{ mongodb_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+#    - { port: "{{ mongodb_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+#    - { port: "{{ mongodb1_port }}", regexp: '^#security', line: 'security:' }
+#    - { port: "{{ mongodb1_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+#    - { port: "{{ mongodb1_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+#    - { port: "{{ mongodb2_port }}", regexp: '^#security', line: 'security:' }
+#    - { port: "{{ mongodb2_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+#    - { port: "{{ mongodb2_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+#    - { port: "{{ mongodb_conf_port }}", regexp: '^#security', line: 'security:' }
+#    - { port: "{{ mongodb_conf_port }}", regexp: '^#  authorization', line: '  authorization: enabled' }
+#    - { port: "{{ mongodb_conf_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }
+#    - { port: "{{ mongos_port }}", regexp: '^#security', line: 'security:' }
+#    - { port: "{{ mongos_port }}", regexp: '^#  keyFile', line: "  keyFile: {{ install_dir }}/mongokey/keyfile" }

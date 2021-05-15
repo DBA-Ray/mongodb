@@ -8,6 +8,7 @@
   pip:
     name: pymongo
     state: latest
+#    executable: pip3.6
 
 - name: Stop mongodb server
   systemd:
@@ -106,6 +107,7 @@
   systemd:
     name: mongod
     state: started
+  when: not is_shard_cluster_pro
 
 - name: Create root user
   mongodb_user:
@@ -115,6 +117,7 @@
     update_password: always
     roles: root
     state: present
+  when: not is_shard_cluster_pro
 
 - name: Add log polling task schedule for mongodb
   cron:
@@ -123,3 +126,4 @@
     minute: "0"
     hour: "1"
     job: "mongo -u root -p \'{{ root_password }}\' --eval \"db.adminCommand( { logRotate : 1 } )\" > /dev/null 2>&1 &"
+  when: not is_shard_cluster_pro

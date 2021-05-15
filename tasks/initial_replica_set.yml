@@ -25,17 +25,17 @@
 #    - "mongo1:{{ mongodb_port }}"
 #    - "mongo2:{{ mongodb_port }}"
 #    - "mongo3:{{ mongodb_port }}"
-#  when: groups.mongodb.index(inventory_hostname) == 0
+#  when: groups.mongoreplset.index(inventory_hostname) == 0
 
 - name: Initiate replicaset
   shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"{{ replsetname }}",members:[{_id:0,host:"mongo1:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb_port }}",priority:10},{_id:3,host:"mongo4:{{ mongodb_port }}",arbiterOnly:true}]})'
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.mongoreplset.index(inventory_hostname) == 0
 
 - name: Set the secondary node to be readable
   copy:
     src: .mongorc.js
     dest: /root/.mongorc.js
-  when: groups.mongodb.index(inventory_hostname) != 0
+  when: groups.mongoreplset.index(inventory_hostname) != 0
 
 - name: Create business database and user
   mongodb_user:
@@ -50,4 +50,4 @@
     replica_set: "{{ replsetname }}"
     roles: readWrite
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.mongoreplset.index(inventory_hostname) == 0

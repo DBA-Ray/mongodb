@@ -46,9 +46,9 @@ net:
 #  bindIp: localhost,{{ inventory_hostname_short }}  # Enter 0.0.0.0,:: to bind to all IPv4 and IPv6 addresses or, alternatively, use the net.bindIpAll setting.
 
 
-#security:
+security:
 #  authorization: enabled
-#  keyFile: {{ install_dir }}/mongokey/keyfile
+  keyFile: {{ install_dir }}/mongokey/keyfile
 
 #operationProfiling:
 
