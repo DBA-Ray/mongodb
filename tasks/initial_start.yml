@@ -51,6 +51,19 @@
     - "{{ keydir }}"
     - "{{ logdir }}"
 
+- name: Copy mongodb_consistent_backup to all members
+  copy:
+    src: mongodb_consistent_backup-1.4.1-1.el7.x86_64.rpm
+    dest: "{{ shelldir }}"
+    owner: mongod
+    group: mongod
+    mode: 0644
+
+- name: Install mongodb_consistent_backup rpm package
+  yum:
+    name: "{{ shelldir }}/mongodb_consistent_backup-1.4.1-1.el7.x86_64.rpm"
+    state: present
+
 - name: Copy keyfile to all members
   copy:
     src: keyfile
@@ -126,4 +139,3 @@
     minute: "0"
     hour: "1"
     job: "mongo -u root -p \'{{ root_password }}\' --eval \"db.adminCommand( { logRotate : 1 } )\" > /dev/null 2>&1 &"
-  when: not is_shard_cluster_pro

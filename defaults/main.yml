@@ -7,11 +7,13 @@ install_dir: /data
 basedir: "{{ install_dir }}/mongodb"
 shelldir: "{{ install_dir }}/shell"
 monitordir: "{{ install_dir }}/monitor"
+backupdir: "{{ install_dir }}/backup"
 datadir: "{{ basedir }}/data"
 keydir: "{{ basedir }}/key"
 etcdir: "{{ basedir }}/etc"
 logdir: "{{ basedir }}/log"
 # Basic parameters
+clustername: mongodb_cluster
 replsetname: "ttjb_rs1"
 mongos_port: 27077
 mongodb_conf_port: 27078

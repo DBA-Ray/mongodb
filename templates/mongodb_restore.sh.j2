@@ -1,0 +1,79 @@
+#!/bin/bash
+
+echo -e "\033[31;1m*****[ Mongodb ] 全库恢复脚本*****\033[0m"
+time_start=`date +%s`
+primary_host=mongo1
+conf_host=mongoc1
+shard0_host=mongo1
+shard1_host=mongo5
+shard2_host=mongo9
+port={{ mongodb_port }}
+user=pmm
+password="{{ root_password }}"
+clustername={{ clustername }}
+replsetname={{ replsetname }}
+mongo_bin=/usr/bin
+cluster_backpath="/data/backup/${clustername}"
+replset_backpath="/data/backup/${replsetname}"
+ 
+if [ -d $cluster_backpath ] || [ -d $replset_backpath ];then
+    read -p "请确认恢复副本集还是分片集群[1:副本集/2:分片]:" choice
+
+    if  [ "$choice" == "1" ];then
+    echo -e "\033[32;1m[ 选择要恢复全库的日期 ] \033[0m"
+    for backfile in `ls -I mongodb-consistent-backup_META -I latest -I previous $replset_backpath`; do
+    echo $backfile
+    done
+ 
+    read -p ">>>" date_bak
+ 
+    if [[ $date_bak == "" ]] || [[ $date_bak == '.' ]] || [[ $date_bak == '..' ]]; then
+    echo -e "\033[31;1m输入不能为特殊字符.\033[0m"
+    exit 1
+    fi
+        echo -e "\033[32;1m正在解压缩备份文件，请稍后...\033[0m"
+        zstd -T0 -d --rm -r -f -v $replset_backpath/$date_bak/* > /tmp/zstd.log 2>&1
+        echo -e "\033[32;1m正在恢复副本集全库备份，请稍后...\033[0m"
+        $mongo_bin/mongorestore --host ${primary_host} --port ${port} -u${user} -p"${password}" --oplogReplay --drop --dir $replset_backpath/$date_bak
+        if [ $? -eq 0 ];then
+            time_end=`date +%s`
+            times=$((${time_end}-${time_start}))
+            echo -e "\033[32;1m--------全库恢复成功,用时${times}s.--------\033[0m"
+        else
+            echo -e "\033[31;1m恢复失败,请手动检查!\033[0m"
+            exit 3
+        fi
+    elif [ "$choice" == "2" ];then
+    echo -e "\033[32;1m[ 选择要恢复全库的日期 ] \033[0m"
+    for backfile in `ls -I mongodb-consistent-backup_META -I latest -I previous $cluster_backpath`; do
+    echo $backfile
+    done
+ 
+    read -p ">>>" date_bak
+ 
+    if [[ $date_bak == "" ]] || [[ $date_bak == '.' ]] || [[ $date_bak == '..' ]]; then
+    echo -e "\033[31;1m输入不能为特殊字符.\033[0m"
+    exit 1
+    fi
+        echo -e "\033[32;1m正在解压缩备份文件，请稍后...\033[0m"
+        zstd -T0 -d --rm -r -f -v $cluster_backpath/$date_bak/* > /tmp/zstd.log 2>&1
+        echo -e "\033[32;1m正在恢复分片集群全库备份，请稍后...\033[0m"
+        $mongo_bin/mongorestore --host ${conf_host} --port ${port} -u${user} -p"${password}" --oplogReplay --drop --dir $cluster_backpath/$date_bak/replconf/dump
+        $mongo_bin/mongorestore --host ${shard0_host} --port ${port} -u${user} -p"${password}" --oplogReplay --drop --dir $cluster_backpath/$date_bak/shard0/dump
+        $mongo_bin/mongorestore --host ${shard1_host} --port ${port} -u${user} -p"${password}" --oplogReplay --drop --dir $cluster_backpath/$date_bak/shard1/dump
+        $mongo_bin/mongorestore --host ${shard2_host} --port ${port} -u${user} -p"${password}" --oplogReplay --drop --dir $cluster_backpath/$date_bak/shard2/dump
+        if [ $? -eq 0 ];then
+            time_end=`date +%s`
+            times=$((${time_end}-${time_start}))
+            echo -e "\033[32;1m--------全库恢复成功,用时${times}s.--------\033[0m"
+        else
+            echo -e "\033[31;1m恢复失败,请手动检查!\033[0m"
+            exit 3
+        fi
+    else
+        exit 2
+    fi
+else
+    echo "\033[31;1m输入信息错误.\033[0m"
+    exit 1
+fi

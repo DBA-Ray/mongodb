@@ -16,6 +16,7 @@ packages:
   - python2-pip.noarch
   - openssl
   - zstd
+  - zbackup
 #  - PyOpenSSL
 #  - pyhon3
 
