@@ -1,4 +1,9 @@
 #initial and start mongodb server
+- name: Disable mongod server
+  systemd:
+    name: mongod
+    enabled: no
+
 - name: Install base packages
   yum:
     name: "{{ packages }}"
@@ -83,7 +88,7 @@
     - { src: 'mongodb_backup.sh.j2', dest: "{{ shelldir }}/mongodb_backup.sh" }
     - { src: 'mongodb_restore.sh.j2', dest: "{{ shelldir }}/mongodb_restore.sh" }
     - { src: 'mongodb-consistent-backup.yml.j2', dest: "{{ shelldir }}/mongodb-consistent-backup.yml" }
-  when: groups.mongodb.index(inventory_hostname) == 2
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 2
 
 - name: Add the job for backuping mongodb cluster
   cron:
@@ -91,22 +96,7 @@
     minute: "0"
     hour: "1"
     job: "{{ shelldir }}/mongodb_backup.sh 2 > /dev/null 2>&1 &"
-  when: groups.mongodb.index(inventory_hostname) == 2
-
-- name: Rendering mongod.conf_auto.sh
-  template:
-    src: mongod.conf_auto.sh.j2
-    dest: "{{ shelldir }}/mongod.conf_auto.sh"
-    owner: root
-    group: root
-    mode: 0744
-    
-- name: Auto config mongod.conf
-  shell: "sh -x {{ shelldir }}/mongod.conf_auto.sh"
-
-- name: Obtain cacheSizeGB
-  shell: "cat /tmp/mongo_cacheSizeGB.txt"
-  register: cacheSizeGB
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 2
 
 - name: Create data directories for mongodb
   file: path="{{ basedir }}_{{ item }}/data" state=directory owner=mongod group=mongod mode=0760
@@ -165,6 +155,21 @@
     - "{{ mongodb1_port }}"
     - "{{ mongodb2_port }}"
 
+- name: Rendering mongod.conf_auto.sh
+  template:
+    src: mongod.conf_auto.sh.j2
+    dest: "{{ shelldir }}/mongod.conf_auto.sh"
+    owner: root
+    group: root
+    mode: 0744
+    
+- name: Auto config mongod.conf
+  shell: "sh -x {{ shelldir }}/mongod.conf_auto.sh"
+
+- name: Obtain cacheSizeGB
+  shell: "cat /tmp/mongo_cacheSizeGB.txt"
+  register: cacheSizeGB
+
 - name: Modify mongod.conf file
   lineinfile:
     dest: "{{ basedir }}_{{ item }}/data/mongod.conf"
@@ -218,8 +223,8 @@
   tags: startup
 
 - name: Initiate config replicaset
-  shell: mongo --port {{ mongodb_conf_port }} --eval 'rs.initiate({_id:"replconf",members:[{_id:0,host:"mongo1:{{ mongodb_conf_port }}"},{_id:1,host:"mongo2:{{ mongodb_conf_port }}"},{_id:2,host:"mongo3:{{ mongodb_conf_port }}"}]})'
-  when: groups.mongodb.index(inventory_hostname) == 0
+  shell: mongo --port {{ mongodb_conf_port }} --eval 'rs.initiate({_id:"replconf",members:[{_id:0,host:"mongo1_{{ env }}:{{ mongodb_conf_port }}"},{_id:1,host:"mongo2_{{ env }}:{{ mongodb_conf_port }}"},{_id:2,host:"mongo3_{{ env }}:{{ mongodb_conf_port }}"}]})'
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Start mongod server
   systemd:
@@ -232,16 +237,16 @@
     - "{{ mongodb2_port }}"
 
 - name: Initiate shard0 replicaset
-  shell: mongo --port {{ mongodb_port }} --eval 'rs.initiate({_id:"shard0",members:[{_id:0,host:"mongo1:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb_port }}",priority:10}]})'
-  when: groups.mongodb.index(inventory_hostname) == 0
+  shell: mongo --port {{ mongodb_port }} --eval 'rs.initiate({_id:"shard0",members:[{_id:0,host:"mongo1_{{ env }}:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2_{{ env }}:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3_{{ env }}:{{ mongodb_port }}",priority:10}]})'
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Initiate shard1 replicaset
-  shell: mongo --port {{ mongodb1_port }} --eval 'rs.initiate({_id:"shard1",members:[{_id:0,host:"mongo1:{{ mongodb1_port }}",priority:20},{_id:1,host:"mongo2:{{ mongodb1_port }}",priority:30},{_id:2,host:"mongo3:{{ mongodb1_port }}",priority:10}]})'
-  when: groups.mongodb.index(inventory_hostname) == 1
+  shell: mongo --port {{ mongodb1_port }} --eval 'rs.initiate({_id:"shard1",members:[{_id:0,host:"mongo1_{{ env }}:{{ mongodb1_port }}",priority:20},{_id:1,host:"mongo2_{{ env }}:{{ mongodb1_port }}",priority:30},{_id:2,host:"mongo3_{{ env }}:{{ mongodb1_port }}",priority:10}]})'
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 1
 
 - name: Initiate shard2 replicaset
-  shell: mongo --port {{ mongodb2_port }} --eval 'rs.initiate({_id:"shard2",members:[{_id:0,host:"mongo1:{{ mongodb2_port }}",priority:10},{_id:1,host:"mongo2:{{ mongodb2_port }}",priority:20},{_id:2,host:"mongo3:{{ mongodb2_port }}",priority:30}]})'
-  when: groups.mongodb.index(inventory_hostname) == 2
+  shell: mongo --port {{ mongodb2_port }} --eval 'rs.initiate({_id:"shard2",members:[{_id:0,host:"mongo1_{{ env }}:{{ mongodb2_port }}",priority:10},{_id:1,host:"mongo2_{{ env }}:{{ mongodb2_port }}",priority:20},{_id:2,host:"mongo3_{{ env }}:{{ mongodb2_port }}",priority:30}]})'
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 2
 
 - name: Start mongos server
   systemd:
@@ -252,14 +257,14 @@
 - name: Initiate mongos replicaset
   shell: mongo --port {{ mongos_port }} --eval '{{ item }}'
   with_items:
-    - sh.addShard( "shard0/mongo1:{{ mongodb_port }},mongo2:{{ mongodb_port }},mongo3:{{ mongodb_port }}")
-    - sh.addShard( "shard1/mongo1:{{ mongodb1_port }},mongo2:{{ mongodb1_port }},mongo3:{{ mongodb1_port }}")
-    - sh.addShard( "shard2/mongo1:{{ mongodb2_port }},mongo2:{{ mongodb2_port }},mongo3:{{ mongodb2_port }}")
-  when: groups.mongodb.index(inventory_hostname) == 0
+    - sh.addShard( "shard0/mongo1_{{ env }}:{{ mongodb_port }},mongo2_{{ env }}:{{ mongodb_port }},mongo3_{{ env }}:{{ mongodb_port }}")
+    - sh.addShard( "shard1/mongo1_{{ env }}:{{ mongodb1_port }},mongo2_{{ env }}:{{ mongodb1_port }},mongo3_{{ env }}:{{ mongodb1_port }}")
+    - sh.addShard( "shard2/mongo1_{{ env }}:{{ mongodb2_port }},mongo2_{{ env }}:{{ mongodb2_port }},mongo3_{{ env }}:{{ mongodb2_port }}")
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Enable Sharding for a Database
   shell: mongo --port {{ mongos_port }} --eval 'sh.enableSharding("{{ database }}")'
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Create root user
   mongodb_user:
@@ -270,7 +275,7 @@
     update_password: always
     roles: root
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Create business user
   mongodb_user:
@@ -284,21 +289,21 @@
     update_password: always
     roles: readWrite
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Create pmm user
   mongodb_user:
     login_host: localhost
     login_user: root
     login_password: "{{ root_password }}"
-    login_port: "{{ mongodb_port }}"
+    login_port: "{{ mongos_port }}"
     database: admin
     name: pmm
     password: "{{ root_password }}"
     update_password: always
     roles: root
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Create pmm user for local shard0
   mongodb_user:
@@ -309,29 +314,29 @@
     update_password: always
     roles: root
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 0
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Create pmm user for local shard1
   mongodb_user:
-    login_port: "{{ mongodb_port }}"
+    login_port: "{{ mongodb1_port }}"
     database: admin
     name: pmm
     password: "{{ root_password }}"
     update_password: always
     roles: root
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 1
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 1
 
 - name: Create pmm user for local shard2
   mongodb_user:
-    login_port: "{{ mongodb_port }}"
+    login_port: "{{ mongodb2_port }}"
     database: admin
     name: pmm
     password: "{{ root_password }}"
     update_password: always
     roles: root
     state: present
-  when: groups.mongodb.index(inventory_hostname) == 2
+  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 2
 
 #- name: Add auth for login
 #  lineinfile:

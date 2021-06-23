@@ -6,6 +6,8 @@ mem=`free -mh|egrep Mem|awk '{print $2}'|awk '{sub(/.$/,"")}1'|awk '{print int($
 
 let cacheSizeGB="(${mem} / 3 - 1) / 2"
 
-#sed -i 's|cacheSizeGB: 1|cacheSizeGB: '"${cacheSizeGB}"'|' /etc/ansible/roles/dba_ray.mongodb/templates/mongod_shard*.conf.j2
-
 echo ${cacheSizeGB} > /tmp/mongo_cacheSizeGB.txt
+
+configDB=`cat /etc/hosts|grep mongo|grep {{ env }}|awk '{print $1}'|awk '{print $0":{{ mongodb_conf_port }}"}'|awk BEGIN{RS=EOF}'{gsub(/\n/,",");print}'`
+
+sed -i 's|configDB: 1|configDB: replconf/'"${configDB}"'|' {{ basedir }}_{{ mongos_port }}/data/mongod.conf

@@ -1,5 +1,8 @@
 ---
 # defaults file for dba_ray.mongodb
+env: test
+# Which hosts to deploy
+deploy_hosts: "mongodb_{{ env }}"
 # Directory path
 mongodb_version: 4.4
 fstab_src: /dev/vdb

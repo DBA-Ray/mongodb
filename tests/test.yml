@@ -1,11 +1,11 @@
 ---
-- hosts: mongodb
+- hosts: "{{ deploy_hosts }}"
   remote_user: root
   vars:
-    is_standalone: True
+    is_standalone: False
     is_replica_set: False
-    is_shard_cluster_pro: True
+    is_shard_cluster_pro: False
     is_shard_cluster: False # All sevices share servers.It does not rely on standalone.  
-    whether_uninstall: True # Whether to uninstall the original service and then install it
+    whether_uninstall: False # Whether to uninstall the original service and then install it
   roles:
     - dba_ray.mongodb
