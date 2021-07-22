@@ -4,7 +4,7 @@ env: test
 # Which hosts to deploy
 deploy_hosts: "mongodb_{{ env }}"
 # Directory path
-mongodb_version: 4.4
+mongodb_version: 5.0
 fstab_src: /dev/vdb
 install_dir: /data
 basedir: "{{ install_dir }}/mongodb"

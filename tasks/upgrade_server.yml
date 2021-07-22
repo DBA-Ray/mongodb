@@ -1,0 +1,99 @@
+#upgrade mongodb server
+
+- name: Rendering mongodb yum repo file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - { src: 'mongodb-org.repo.j2', dest: '/etc/yum.repos.d/mongodb-org.repo' }
+
+- name: Install mongodb via yum
+  yum:
+    name: mongodb-org*
+    state: latest
+  register: repo
+  retries: 7
+  until: repo is succeeded
+
+# upgrade mongodb shard cluster
+
+- name: Stop mongodb server
+  systemd:
+    name: "mongod_{{ item }}"
+    state: stopped
+  with_items: 
+    - "{{ mongos_port }}"
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+    - "{{ mongodb_conf_port }}"
+  when: upgrade_shard_cluster
+
+- name: Start mongod_conf server
+  systemd:
+    name: "mongod_{{ mongodb_conf_port }}"
+    state: started
+  when: upgrade_shard_cluster
+
+- name: Start mongod server
+  systemd:
+    name: "mongod_{{ item }}"
+    state: started
+  with_items: 
+    - "{{ mongodb_port }}"
+    - "{{ mongodb1_port }}"
+    - "{{ mongodb2_port }}"
+  when: upgrade_shard_cluster
+
+- name: Start mongos server
+  systemd:
+    name: "mongod_{{ mongos_port }}"
+    state: started
+  when: upgrade_shard_cluster
+
+# upgrade mongodb shard cluster pro
+
+- name: Stop mongos server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongos and upgrade_shard_cluster_pro
+
+- name: Stop mongodb shard server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongoshard and upgrade_shard_cluster_pro
+
+- name: Stop mongodb config server
+  systemd:
+    name: mongod
+    state: stopped
+  tags: shutdown
+  when: ansible_hostname in groups.mongoconf and upgrade_shard_cluster_pro
+
+- name: Start mongodb config server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongoconf and upgrade_shard_cluster_pro
+
+- name: Start mongodb shard server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongoshard and upgrade_shard_cluster_pro
+
+- name: Start mongos server
+  systemd:
+    name: mongod
+    state: started
+  tags: startup
+  when: ansible_hostname in groups.mongos and upgrade_shard_cluster_pro

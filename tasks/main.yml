@@ -14,3 +14,6 @@
 
 - include: initial_shard_cluster.yml
   when: is_shard_cluster | default(False)
+
+- include: upgrade_server.yml
+  when: upgrade_server | default(False)

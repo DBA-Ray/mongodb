@@ -1,0 +1,9 @@
+---
+- hosts: "{{ deploy_hosts }}"
+  remote_user: root
+  vars:  
+    upgrade_server: True # Whether to upgrade mongodb server
+    upgrade_shard_cluster: True # Whether to upgrade mongodb shard cluster
+    upgrade_shard_cluster_pro: False # Whether to upgrade mongodb shard cluster pro
+  roles:
+    - dba_ray.mongodb
