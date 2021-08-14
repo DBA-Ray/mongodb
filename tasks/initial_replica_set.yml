@@ -28,7 +28,7 @@
 #  when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Initiate replicaset
-  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"{{ replsetname }}",members:[{_id:0,host:"mongo1_{{ env }}:{{ mongodb_port }}",priority:30},{_id:1,host:"mongo2_{{ env }}:{{ mongodb_port }}",priority:20},{_id:2,host:"mongo3_{{ env }}:{{ mongodb_port }}",priority:10},{_id:3,host:"mongo4_{{ env }}:{{ mongodb_port }}",arbiterOnly:true}]})'
+  shell: mongo -uroot -p'{{ root_password }}' --eval 'rs.initiate({_id:"{{ replsetname }}",members:[{_id:0,host:"mongorepl1_{{ env }}:{{ mongodb_port }}",priority:30},{_id:1,host:"mongorepl2_{{ env }}:{{ mongodb_port }}",priority:20},{_id:2,host:"mongorepl3_{{ env }}:{{ mongodb_port }}",priority:10}]})'
   when: groups.{{ deploy_hosts }}.index(inventory_hostname) == 0
 
 - name: Set the secondary node to be readable

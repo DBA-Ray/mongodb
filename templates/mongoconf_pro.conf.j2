@@ -17,21 +17,21 @@ operationProfiling:
 # Where and how to store data.
 storage:
   dbPath: {{ datadir }}
-  directoryPerDB: true
   journal:
     enabled: true
-#    commitIntervalMs:500
+    commitIntervalMs: 500
+  directoryPerDB: true
   engine: wiredTiger
-  oplogMinRetentionHours: 168
-#  wiredTiger:
-#    engineConfig:
-#         cacheSizeGB: <number>
-#         journalCompressor: zstd
-#         directoryForIndexes: false
-#      collectionConfig:
-#         blockCompressor: zstd
-#      indexConfig:
-#         prefixCompression: true
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: {{ (ansible_memtotal_mb * 3) // 4096 }}
+      journalCompressor: zstd
+      directoryForIndexes: false
+    collectionConfig:
+      blockCompressor: zstd
+    indexConfig:
+      prefixCompression: true
+  oplogMinRetentionHours: 0
 
 # how the process runs
 processManagement:

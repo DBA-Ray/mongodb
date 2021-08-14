@@ -9,6 +9,9 @@
     name: pymongo
     state: latest
 #    executable: pip3.6
+  register: pymongo
+  retries: 7
+  until: pymongo is succeeded
 
 - name: Stop mongodb server
   systemd:
@@ -19,6 +22,13 @@
 - name: Remove existing mongodb directory
   file:
     path: "{{ basedir }}"
+    state: absent
+    remote_src: 'True'
+  when: whether_uninstall
+
+- name: Remove existing mongodb journal directory
+  file:
+    path: /var/lib/mongo/journal
     state: absent
     remote_src: 'True'
   when: whether_uninstall
@@ -35,7 +45,12 @@
 
 - name: Install mongodb via yum
   yum:
-    name: mongodb-org*
+    name: "{{ packages }}"
+  vars: 
+    packages:
+    - mongodb-mongosh*
+    - mongodb-org*
+    - mongodb-database-tools*
     state: latest
   register: repo
   retries: 7
@@ -50,6 +65,7 @@
     - "{{ datadir }}"
     - "{{ keydir }}"
     - "{{ logdir }}"
+    - /var/lib/mongo/journal
 
 - name: Copy mongodb_consistent_backup to all members
   copy:
@@ -84,6 +100,15 @@
     mode: 0660
   with_items:
     - { src: 'mongod.conf.j2', dest: "/etc/mongod.conf" }
+
+- name: Create a journal log link
+  file:
+    src: /var/lib/mongo/journal
+    dest: "{{ datadir }}/journal"
+    owner: mongod
+    group: mongod
+    state: link
+    force: yes
 
 #- name: Rendering bash file
 #  template:
@@ -132,10 +157,24 @@
     state: present
   when: not is_shard_cluster_pro
 
+- name: Create pmm user
+  mongodb_user:
+    login_host: localhost
+    login_user: root
+    login_password: "{{ root_password }}"
+    login_port: "{{ mongodb_port }}"
+    database: admin
+    name: pmm
+    password: "{{ root_password }}"
+    update_password: always
+    roles: root
+    state: present
+  when: not is_shard_cluster_pro
+
 - name: Add log polling task schedule for mongodb
   cron:
     name: "logrotate"
     weekday: "0"
     minute: "0"
     hour: "1"
-    job: "mongo -u root -p \'{{ root_password }}\' --eval \"db.adminCommand( { logRotate : 1 } )\" > /dev/null 2>&1 &"
+    job: "mongo -u pmm -p \'{{ root_password }}\' --eval \"db.adminCommand( { logRotate : 1 } )\" > /dev/null 2>&1 &"

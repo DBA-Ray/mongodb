@@ -54,7 +54,7 @@ security:
 
 #replication
 sharding:
-  configDB: replconf/mongoc1:{{ mongodb_port }},mongoc2:{{ mongodb_port }},mongoc3:{{ mongodb_port }}
+  configDB: replconf/mongoc1_{{ env }}:{{ mongodb_port }},mongoc2_{{ env }}:{{ mongodb_port }},mongoc3_{{ env }}:{{ mongodb_port }}
 
 
 ## Enterprise-Only Options

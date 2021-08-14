@@ -14,10 +14,10 @@ backupdir: "{{ install_dir }}/backup"
 datadir: "{{ basedir }}/data"
 keydir: "{{ basedir }}/key"
 etcdir: "{{ basedir }}/etc"
-logdir: "{{ basedir }}/log"
+logdir: /var/log/mongodb
 # Basic parameters
-clustername: mongodb_cluster
-replsetname: "ttjb_rs1"
+clustername: "mongodb_cluster_{{ env }}"
+replsetname: "rs_{{ env }}"
 mongos_port: 27077
 mongodb_conf_port: 27078
 mongodb_port: 27017
