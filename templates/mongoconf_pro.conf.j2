@@ -24,7 +24,7 @@ storage:
   engine: wiredTiger
   wiredTiger:
     engineConfig:
-      cacheSizeGB: {{ (ansible_memtotal_mb * 3) // 4096 }}
+      cacheSizeGB: {{ ansible_memtotal_mb / 1024 * 3 // 4 }}
       journalCompressor: zstd
       directoryForIndexes: false
     collectionConfig:
