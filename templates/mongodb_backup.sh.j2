@@ -104,7 +104,7 @@ mongodump -h ${replsethost} -u pmm -p"${replsetpassword}" --port ${replsetport} 
 if [ $? -eq 0 ];then
     echo "The MongoDB ReplSet BackUp Successfully!"
 else
-    echo "The MongoDB ReplSet BackUp Failure"
+    echo "The MongoDB ReplSet BackUp Failure!"
 
     SendMessageToDingding "MongoDB ReplSet(${hostname})逻辑备份失败，请及时查看备份日志！"
 
