@@ -24,5 +24,5 @@ mongodb_port: 27017
 mongodb1_port: 27018
 mongodb2_port: 27019
 # Business info
-business_user: ttjb
-database: ttjb
+business_user: example
+database: example
